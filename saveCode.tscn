@@ -1,0 +1,258 @@
+[gd_scene load_steps=2 format=2]
+
+[sub_resource type="GDScript" id=1]
+
+script/source = "extends Node
+
+var root_Node = null
+
+var width = 960
+var height = 640
+var mapSizeX = width/32
+var mapSizeY = height/32
+var mapSize = mapSizeX*mapSizeY
+var x = 16
+var y = 16
+
+var zLevel = null
+
+var MAP = []
+var objMAP = []
+var phisicsBodyMap = []
+
+var floorMas = []
+
+var floorCreate = false
+var wallCreate = false
+
+var checkImage = load(\"res://checkImg.png\")
+
+var open_space = preload(\"res://obj/open_space.tscn\")#0
+var earth = preload(\"res://obj/earth.tscn\")#1
+var grass = preload(\"res://obj/grass.tscn\")#2
+var water = preload(\"res://obj/water.tscn\")#3
+var tree = preload(\"res://obj/tree.tscn\")#4
+var stone = preload(\"res://obj/stone.tscn\")#5
+#var bush = preload(\"res://obj/bush.tscn\")#6
+
+var eventText = null
+var event = null
+var mytext = []
+var page = 0
+var wipe = false
+
+func _ready():
+	root_Node = get_tree().get_root().get_child(get_tree().get_root().get_child_count() - 1)
+	randomize(true)
+	eventText = root_Node.get_node(\"CanvasLayer\")
+	#eventText.layer = 2
+	event = eventText.get_node(\"Panel/events\")
+	fillMap()
+	fillObjMap()
+	forestBiom(8, 16)
+	#forestBiom(6, 12)
+
+
+func rand(a, b):
+	return range(a, b)[randi()%range(a, b).size()]
+
+func say(text):
+	if(mytext.size()>0):
+		event.clear()
+	mytext.append(text)
+	for i in mytext.size():
+		event.add_text(str(mytext[i], \"\\n\"))
+	#event.set_bbcode(str(mytext[page]))
+
+func _on_Timer_timeout():
+	if(mytext.size()>1):
+		mytext.pop_front()
+		event.clear()
+		for i in mytext.size():
+			event.add_text(str(mytext[i], \"\\n\"))
+
+func fillMap():
+	var k = 0
+	var mas = []
+	var mas2 = []
+	while (k < mapSize):
+		var e = earth.instance()
+		e.position = Vector2(x, y)
+		add_child(e)
+		e.add_to_group(\"earth\")
+		mas.append(e)
+		var o = open_space.instance()
+		o.position = Vector2(x, y)
+		#add_child(o)
+		o.add_to_group(\"open_space\")
+		mas2.append(o)
+		x += 32
+		k += 1
+		if (x >= width):
+			x = 16
+			y += 32
+			MAP.append(mas)
+			phisicsBodyMap.append(mas2)
+			#say(mas)
+			mas = []
+			mas2 = []
+		if (k >= mapSize):
+			x = 16
+			y = 16
+	#say(MAP)
+
+func fillObjMap():
+	var mas = []
+	for i in mapSizeY:
+		for j in mapSizeX:
+			mas.append(0)
+		objMAP.append(mas)
+		mas = []
+
+func forestBiom(minT, maxT):
+	var biom = { tiles = { amountX = round(rand_range(minT, maxT)), amountY = round(rand_range(minT, maxT)), width = 32, height = 32 } }
+	if (abs(biom.tiles.amountX - biom.tiles.amountY) >= 2):
+		if(biom.tiles.amountX < biom.tiles.amountY):
+			while biom.tiles.amountX < biom.tiles.amountY - 2:
+				biom.tiles.amountX += 1
+		else:
+			while biom.tiles.amountY < biom.tiles.amountX - 2:
+				biom.tiles.amountY += 1
+	var biomSize = { size = biom.tiles.amountX*biom.tiles.amountY, x = biom.tiles.amountX*32, y = biom.tiles.amountY*32 }
+	var biomDone = { grass = false, tree = false, glade = false, bush = false, stone = false}
+	var biomMas = []
+	
+	var glade = { tiles = { amountX = round(rand_range(2, 6)), amountY = round(rand_range(2, 6)), width = 32, height = 32 } }
+	if (abs(glade.tiles.amountX - glade.tiles.amountY) >= 2):
+		if(glade.tiles.amountX < glade.tiles.amountY):
+			while glade.tiles.amountX < glade.tiles.amountY - 2:
+				glade.tiles.amountX += 1
+		else:
+			while glade.tiles.amountY < glade.tiles.amountX - 2:
+				glade.tiles.amountY += 1
+	var gladeSize = { size = glade.tiles.amountX*glade.tiles.amountY, x = glade.tiles.amountX*32, y = glade.tiles.amountY*32 }
+
+	var mas = []
+	var this = { x = rand(0, mapSizeX-biom.tiles.amountX)*32 + x, y = rand(0, mapSizeY-biom.tiles.amountY)*32 + y }
+	var step = { x = this.x, y = this.y }
+	var mpos = { n = 0, x = this.x/biom.tiles.width, y = this.y/biom.tiles.height } # MAP position
+	say(str(\"Biom size: \", biom.tiles.amountX, \"x\", biom.tiles.amountY))
+	for i in biomSize.size:
+		var g = grass.instance()
+		g.position = Vector2(step.x, step.y)
+		remove_child(MAP[mpos.y][mpos.x])
+		add_child(g)
+		#g.visible = false
+		g.add_to_group(\"grass\")
+		#if(phisicsBodyMap[mpos.y][mpos.x].is_in_group(\"tree\")):
+			#remove_child(phisicsBodyMap[mpos.y][mpos.x])
+		mas.append(g)
+		mpos.n = mapSizeY*mpos.y + mpos.x
+		MAP[mpos.y].remove(mpos.x)
+		MAP[mpos.y].insert(mpos.x, g)
+		step.x += 32
+		mpos.x += 1
+		if(step.x >= this.x + biomSize.x):
+			step.x = this.x
+			mpos.x = this.x/biom.tiles.width 
+			step.y += 32
+			biomMas.append(mas)
+			mas = []
+			mpos.y += 1
+		if (i+1 == biomSize.size):
+			biomDone.grass = true
+			#this.x = 0
+			#this.y = 0
+			say(str(\"Create grass: \", biomDone.grass))
+	if(biomDone.grass):
+		mas = []
+		var spawn = null
+		for i in MAP.size():
+			for j in MAP[i].size():
+				if( MAP[i][j].is_in_group(\"grass\") ):
+					spawn = round(rand_range(1, 2))
+					if( spawn > 1 and MAP[i+1][j].is_in_group(\"grass\") and MAP[i-1][j].is_in_group(\"grass\") and MAP[i][j+1].is_in_group(\"grass\") and MAP[i][j-1].is_in_group(\"grass\") ):
+						if(objMAP[i][j-1] != 4 and objMAP[i][j+1] != 4 and objMAP[i-1][j] != 4 and objMAP[i+1][j] != 4 and 
+						objMAP[i+1][j-1] != 4 and objMAP[i+1][j+1] != 4 and objMAP[i-1][j+1] != 4 and objMAP[i-1][j-1] != 4 and 
+						objMAP[i][j] != 4):
+							var t = tree.instance()
+							t.position = Vector2(j*biom.tiles.width+16, i*biom.tiles.height+16)
+							#remove_child(MAP[i][j])
+							add_child(t)
+							t.add_to_group(\"tree\")
+							objMAP[i].remove(j)
+							objMAP[i].insert(j, 4)
+							phisicsBodyMap[i].remove(j)
+							phisicsBodyMap[i].insert(j, t)
+		biomDone.tree = true
+		say(str(\"Create tree: \", biomDone.tree))
+	if(biomDone.tree):
+		this = { x = rand(this.x/32, (this.x/32)+(biomSize.x/32)-glade.tiles.amountX)*32 + 16, y = rand(this.y/32, (this.y/32)+(biomSize.y/32)-glade.tiles.amountY)*32 + 16 }
+		step = { x = this.x, y = this.y }
+		mpos = { n = 0, x = this.x/glade.tiles.width, y = this.y/glade.tiles.height }
+		say(str(\"Glade size: \", glade.tiles.amountX, \"x\", glade.tiles.amountY))
+		#say(str(mpos.x, \" \", mpos.y))
+		for i in gladeSize.size:
+			var g = grass.instance()
+			g.position = Vector2(step.x, step.y)
+			remove_child(MAP[mpos.y][mpos.x])
+			if(phisicsBodyMap[mpos.y][mpos.x].is_in_group(\"tree\")):
+				remove_child(phisicsBodyMap[mpos.y][mpos.x])
+				objMAP[mpos.y].remove(mpos.x)
+				objMAP[mpos.y].insert(mpos.x, 0)
+				#say(\"deleted\")
+			mpos.n = mapSizeY*mpos.y + mpos.x
+			add_child(g)
+			#g.visible = false
+			MAP[mpos.y].remove(mpos.x)
+			MAP[mpos.y].insert(mpos.x, g)
+			step.x += 32
+			mpos.x += 1
+			if(step.x > this.x + gladeSize.x):
+				step.x = this.x
+				mpos.x = this.x/glade.tiles.width 
+				step.y += 32
+				mpos.y += 1
+			if(i+1 == gladeSize.size):
+				step.x = this.x
+				step.y = this.y
+				biomDone.glade = true
+				say(str(\"Create glade: \", biomDone.glade))
+	if(biomDone.glade):
+		mpos = { n = 0, x = this.x/glade.tiles.width, y = this.y/glade.tiles.height }
+		mas = []
+		var k = 0
+		var j = 0
+		var spawn = null
+		for i in gladeSize.size:
+			k = step.y/32
+			j = step.x/32
+			if(objMAP[k][j] != 4):
+				if(objMAP[k][j+1] != 5 and objMAP[k][j-1] != 5 and objMAP[k+1][j] != 5 and objMAP[k-1][j] != 5 and 
+				objMAP[k+1][j+1] != 5 and objMAP[k+1][j-1] != 5 and objMAP[k-1][j+1] != 5 and objMAP[k-1][j-1] != 5):
+					spawn = round(rand_range(1, 2))
+					if(spawn>1):
+						var s = stone.instance()
+						s.position = Vector2(step.x, step.y)
+						#s.position = Vector2(k*32, j*32)
+						add_child(s)
+						s.add_to_group(\"stone\")
+						phisicsBodyMap[k].remove(j)
+						phisicsBodyMap[k].insert(j, s)
+						objMAP[k].remove(j)
+						objMAP[k].insert(j, 5)
+			step.x += 32
+			if(step.x > this.x+gladeSize.x):
+				step.x = this.x
+				step.y += 32
+		biomDone.stone = true
+		say(str(\"Create stone: \", biomDone.stone))
+	say(\"Forest biom generation: true\")
+"
+_sections_unfolded = [ "Resource" ]
+
+[node name="saveCode" type="Node" index="0"]
+
+script = SubResource( 1 )
+
+

@@ -1,0 +1,44 @@
+[gd_scene load_steps=4 format=2]
+
+[ext_resource path="res://obj/grass.gd" type="Script" id=1]
+[ext_resource path="res://obj/grass.png" type="Texture" id=2]
+
+[sub_resource type="RectangleShape2D" id=1]
+
+custom_solver_bias = 0.0
+extents = Vector2( 10, 10 )
+
+[node name="grass" type="Area2D" index="0" groups=[
+"grass",
+]]
+
+input_pickable = true
+gravity_vec = Vector2( 0, 1 )
+gravity = 98.0
+linear_damp = 0.1
+angular_damp = 1.0
+audio_bus_override = false
+audio_bus_name = "Master"
+script = ExtResource( 1 )
+_sections_unfolded = [ "Z Index" ]
+
+[node name="Sprite" type="Sprite" parent="." index="0"]
+
+z_index = 2
+texture = ExtResource( 2 )
+_sections_unfolded = [ "Z Index" ]
+
+[node name="CollisionShape2D" type="CollisionShape2D" parent="." index="1"]
+
+position = Vector2( -0.270538, -0.000664413 )
+scale = Vector2( 1.49638, 1.4756 )
+shape = SubResource( 1 )
+_sections_unfolded = [ "Transform" ]
+
+[connection signal="area_entered" from="." to="." method="_on_grass_area_entered"]
+
+[connection signal="body_entered" from="." to="." method="_on_grass_body_entered"]
+
+[connection signal="input_event" from="." to="." method="_on_grass_input_event"]
+
+
